@@ -8,7 +8,6 @@ import pl.dmcs.mww.model.Grade;
 import pl.dmcs.mww.model.Student;
 import pl.dmcs.mww.model.request.AddGradeRequest;
 import pl.dmcs.mww.model.request.AddStudentRequest;
-import pl.dmcs.mww.repository.GradeRepository;
 import pl.dmcs.mww.repository.StudentRepository;
 
 import java.util.List;
@@ -19,11 +18,9 @@ import java.util.List;
 public class StudentController {
 
     private StudentRepository studentRepository;
-    private GradeRepository gradeRepository;
 
-    @Autowired public StudentController(StudentRepository studentRepository, GradeRepository gradeRepository) {
+    @Autowired public StudentController(StudentRepository studentRepository) {
         this.studentRepository = studentRepository;
-        this.gradeRepository = gradeRepository;
     }
     @PreAuthorize("hasRole('ADMIN') or hasRole('TEACHER') or hasRole('STUDENT')")
     @RequestMapping(method = RequestMethod.GET)
@@ -46,6 +43,7 @@ public class StudentController {
         System.out.println("PUT request");
         Student student = studentRepository.findById(id);
         if (student == null) {
+            System.out.println("Student not found! Creating new student");
             Student n = new Student();
             n.setName(s.getName());
             n.setSurname(s.getSurname());
@@ -67,10 +65,8 @@ public class StudentController {
             System.out.println("Student not found!");
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+
         studentRepository.deleteById(id);
-        for(Grade g: student.getGrades()) {
-            gradeRepository.delete(g);
-        }
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
     @PreAuthorize("hasRole('ADMIN') or hasRole('TEACHER') or hasRole('STUDENT')")
@@ -88,11 +84,11 @@ public class StudentController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('TEACHER')")
     @RequestMapping(value="/{id}/grades", method = RequestMethod.POST)
     public Grade addGrade(@PathVariable("id") long id, @RequestBody AddGradeRequest g) {
+        System.out.println("POST grade request");
         Grade grade = new Grade();
         grade.setGrade(g.getGrade());
         grade.setSubject(g.getSubject());
         grade.setWeight(g.getWeight());
-        gradeRepository.save(grade);
         Student s = studentRepository.findById(id);
         s.getGrades().add(grade);
         studentRepository.save(s);
@@ -112,7 +108,6 @@ public class StudentController {
             grade.setGrade(g.getGrade());
             grade.setSubject(g.getSubject());
             grade.setWeight(g.getWeight());
-            gradeRepository.save(grade);
             Student s = studentRepository.findById(id);
             s.getGrades().add(grade);
             studentRepository.save(s);
@@ -123,7 +118,6 @@ public class StudentController {
                 grade.setGrade(g.getGrade());
                 grade.setWeight(g.getWeight());
                 grade.setSubject(g.getSubject());
-                gradeRepository.save(grade);
                 studentRepository.save(student);
                 return new ResponseEntity<>(grade, HttpStatus.OK);
             }
@@ -142,7 +136,6 @@ public class StudentController {
         for (Grade grade : student.getGrades()) {
             if (grade.getId() == gradeId) {
                 student.getGrades().remove(grade);
-                gradeRepository.delete(grade);
                 studentRepository.save(student);
                 return new ResponseEntity<>(grade, HttpStatus.NO_CONTENT);
             }
